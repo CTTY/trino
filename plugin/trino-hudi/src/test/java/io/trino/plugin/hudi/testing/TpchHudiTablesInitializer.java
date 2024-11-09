@@ -39,6 +39,8 @@ import io.trino.tpch.TpchColumn;
 import io.trino.tpch.TpchColumnType;
 import io.trino.tpch.TpchColumnTypes;
 import io.trino.tpch.TpchTable;
+import java.time.Instant;
+import java.util.Date;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
@@ -166,7 +168,7 @@ public class TpchHudiTablesInitializer
                     .map(MaterializedRow::getFields)
                     .map(recordConverter::toRecord)
                     .collect(Collectors.toList());
-            String timestamp = HoodieActiveTimeline.createNewInstantTime();
+            String timestamp = HoodieActiveTimeline.formatDate(Date.from(Instant.now()));
             writeClient.startCommitWithTime(timestamp);
             writeClient.insert(records, timestamp);
         }

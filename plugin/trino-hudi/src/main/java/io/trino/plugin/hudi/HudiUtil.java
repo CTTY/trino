@@ -33,9 +33,15 @@ import io.trino.spi.predicate.Domain;
 import io.trino.spi.predicate.NullableValue;
 import io.trino.spi.predicate.TupleDomain;
 import io.trino.spi.type.VarcharType;
+import java.util.stream.Collectors;
 import org.apache.avro.Schema;
 import org.apache.avro.SchemaBuilder;
+import org.apache.hudi.common.fs.FSUtils;
+import org.apache.hudi.common.model.FileSlice;
+import org.apache.hudi.common.model.HoodieBaseFile;
 import org.apache.hudi.common.model.HoodieFileFormat;
+import org.apache.hudi.common.model.HoodieFileGroupId;
+import org.apache.hudi.common.model.HoodieLogFile;
 import org.apache.hudi.common.table.HoodieTableMetaClient;
 
 import java.io.IOException;
@@ -44,6 +50,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.IntStream;
+import org.apache.hudi.common.util.Option;
+import org.apache.hudi.storage.StoragePath;
 
 import static io.trino.plugin.hive.HiveErrorCode.HIVE_INVALID_METADATA;
 import static io.trino.plugin.hive.util.HiveUtil.checkCondition;
@@ -186,5 +194,22 @@ public final class HudiUtil
                 .toList());
         columns.addAll(dataColumns);
         return columns;
+    }
+
+    public static FileSlice convertToFileSlice(HudiSplit split, String basePath) {
+        String dataFilePath = split.getBaseFile().isPresent()
+                ? split.getBaseFile().get().getPath()
+                : split.getLogFiles().getFirst();
+        String fileId = FSUtils.getFileIdFromFileName(new StoragePath(dataFilePath).getName());
+        HoodieBaseFile baseFile = split.getBaseFile().isPresent()
+                ? new HoodieBaseFile(dataFilePath, fileId, split.getCommitTime(), null)
+                : null;
+
+        return new FileSlice(
+                new HoodieFileGroupId(FSUtils.getRelativePartitionPath(new StoragePath(basePath), new StoragePath(dataFilePath)), fileId),
+                split.getCommitTime(),
+                baseFile,
+                split.getLogFiles().stream().map(HoodieLogFile::new).toList()
+        );
     }
 }
