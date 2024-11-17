@@ -13,7 +13,6 @@
  */
 package io.trino.plugin.hudi.reader;
 
-import static com.google.common.base.Preconditions.checkState;
 import static org.apache.hudi.common.model.HoodieRecord.HOODIE_META_COLUMNS;
 
 import io.trino.plugin.hive.HiveColumnHandle;
@@ -21,33 +20,27 @@ import io.trino.plugin.hive.HivePartitionKey;
 import io.trino.plugin.hudi.util.HudiAvroSerializer;
 import io.trino.spi.Page;
 import io.trino.spi.PageBuilder;
-import io.trino.spi.block.Block;
 import io.trino.spi.connector.ConnectorPageSource;
+
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
+
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericData.Record;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.generic.IndexedRecord;
-import org.apache.hudi.avro.HoodieAvroUtils;
+
+import org.apache.hudi.common.config.RecordMergeMode;
 import org.apache.hudi.common.engine.HoodieReaderContext;
-import org.apache.hudi.common.model.HoodieAvroIndexedRecord;
-import org.apache.hudi.common.model.HoodieAvroRecordMerger;
-import org.apache.hudi.common.model.HoodieEmptyRecord;
-import org.apache.hudi.common.model.HoodieKey;
-import org.apache.hudi.common.model.HoodieRecord;
-import org.apache.hudi.common.model.HoodieRecordMerger;
+import org.apache.hudi.common.model.*;
 import org.apache.hudi.common.util.Option;
 import org.apache.hudi.common.util.collection.ClosableIterator;
-import org.apache.hudi.exception.HoodieIOException;
 import org.apache.hudi.storage.HoodieStorage;
-import org.apache.hudi.storage.HoodieStorageUtils;
-import org.apache.hudi.storage.StorageConfiguration;
 import org.apache.hudi.storage.StoragePath;
 
 public class HudiTrinoReaderContext extends HoodieReaderContext<IndexedRecord> {
@@ -78,15 +71,11 @@ public class HudiTrinoReaderContext extends HoodieReaderContext<IndexedRecord> {
         }
 
         this.columnHandles = columnHandles;
+        this.colToPosMap = new HashMap<>();
         for (int i = 0; i < columnHandles.size(); i++) {
             HiveColumnHandle handle = columnHandles.get(i);
             colToPosMap.put(handle.getBaseColumnName(), i);
         }
-    }
-
-    @Override
-    public HoodieStorage getStorage(String path, StorageConfiguration<?> storageConf) {
-        return HoodieStorageUtils.getStorage(path, storageConf);
     }
 
     @Override
@@ -130,8 +119,17 @@ public class HudiTrinoReaderContext extends HoodieReaderContext<IndexedRecord> {
     }
 
     @Override
-    public HoodieRecordMerger getRecordMerger(String mergerStrategy) {
-        return HoodieAvroRecordMerger.INSTANCE;
+    public GenericRecord convertToAvroRecord(IndexedRecord record, Schema schema) {
+        GenericRecord ret = new GenericData.Record(schema);
+        for (Schema.Field field : schema.getFields()) {
+            ret.put(field.name(), record.get(field.pos()));
+        }
+        return ret;
+    }
+
+    @Override
+    public Option<HoodieRecordMerger> getRecordMerger(RecordMergeMode mergeMode, String mergeStrategyId, String mergeImplClasses) {
+        return Option.of(HoodieAvroRecordMerger.INSTANCE);
     }
 
     @Override
@@ -177,6 +175,14 @@ public class HudiTrinoReaderContext extends HoodieReaderContext<IndexedRecord> {
             }
             return toRecord;
         };
+    }
+
+    @Override
+    public Comparable castValue(Comparable value, Schema.Type newType) {
+        if (newType == Schema.Type.STRING) {
+            return value.toString();
+        }
+        return value;
     }
 
     @Override

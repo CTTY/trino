@@ -52,11 +52,11 @@ import static io.trino.hive.formats.HiveClassNames.HUDI_PARQUET_INPUT_FORMAT;
 import static io.trino.hive.formats.HiveClassNames.MAPRED_PARQUET_OUTPUT_FORMAT_CLASS;
 import static io.trino.hive.formats.HiveClassNames.PARQUET_HIVE_SERDE_CLASS;
 import static io.trino.plugin.hive.HivePartitionManager.extractPartitionValues;
-import static io.trino.plugin.hive.HiveType.HIVE_DOUBLE;
-import static io.trino.plugin.hive.HiveType.HIVE_INT;
-import static io.trino.plugin.hive.HiveType.HIVE_LONG;
-import static io.trino.plugin.hive.HiveType.HIVE_STRING;
+import static io.trino.plugin.hive.HiveType.*;
 import static io.trino.plugin.hive.TableType.EXTERNAL_TABLE;
+import static io.trino.plugin.hive.type.PrimitiveCategory.DECIMAL;
+import static io.trino.plugin.hive.type.TypeInfoFactory.getPrimitiveTypeInfo;
+import static io.trino.plugin.hive.util.SerdeConstants.DECIMAL_TYPE_NAME;
 
 public class ResourceHudiTablesInitializer
         implements HudiTablesInitializer
@@ -167,6 +167,8 @@ public class ResourceHudiTablesInitializer
         HUDI_COW_PT_TBL(multiPartitionRegularColumns(), multiPartitionColumns(), multiPartitions()),
         STOCK_TICKS_COW(stockTicksRegularColumns(), stockTicksPartitionColumns(), stockTicksPartitions()),
         STOCK_TICKS_MOR(stockTicksRegularColumns(), stockTicksPartitionColumns(), stockTicksPartitions()),
+        HUDI_STOCK_TICKS_COW(hudiStockTicksRegularColumns(), hudiStockTicksPartitionColumns(), hudiStockTicksPartitions()),
+        HUDI_STOCK_TICKS_MOR(hudiStockTicksRegularColumns(), hudiStockTicksPartitionColumns(), hudiStockTicksPartitions())
         /**/;
 
         private static final List<Column> HUDI_META_COLUMNS = ImmutableList.of(
@@ -252,6 +254,32 @@ public class ResourceHudiTablesInitializer
         private static Map<String, String> stockTicksPartitions()
         {
             return ImmutableMap.of("dt=2018-08-31", "2018/08/31");
+        }
+
+        private static List<Column> hudiStockTicksRegularColumns()
+        {
+            return ImmutableList.of(
+                    column("volume", HIVE_LONG),
+                    column("ts", HIVE_STRING),
+                    column("symbol", HIVE_STRING),
+                    column("year", HIVE_INT),
+                    column("month", HIVE_STRING),
+                    column("high", HIVE_DOUBLE),
+                    column("low", HIVE_DOUBLE),
+                    column("key", HIVE_STRING),
+                    column("close", HIVE_DOUBLE),
+                    column("open", HIVE_DOUBLE),
+                    column("day", HIVE_STRING));
+        }
+
+        private static List<Column> hudiStockTicksPartitionColumns()
+        {
+            return ImmutableList.of(column("date", HIVE_STRING));
+        }
+
+        private static Map<String, String> hudiStockTicksPartitions()
+        {
+            return ImmutableMap.of("date=2018-08-31", "2018/08/31");
         }
 
         private static List<Column> multiPartitionRegularColumns()

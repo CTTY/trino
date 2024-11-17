@@ -125,7 +125,11 @@ public class HudiMetadata
         StoragePath metaLocation = new StoragePath(
                 table.get().getStorage().getLocation(), HoodieTableMetaClient.METAFOLDER_NAME);
         HoodieTableConfig tableConfig = new HoodieTableConfig(
-                new HudiTrinoStorage(fileSystem, new TrinoStorageConfiguration()), metaLocation, null, null);
+                new HudiTrinoStorage(fileSystem, new TrinoStorageConfiguration()),
+                metaLocation,
+                null,
+                null,
+                null);
         String preCombineField = tableConfig.getPreCombineField();
 
         return new HudiTableHandle(

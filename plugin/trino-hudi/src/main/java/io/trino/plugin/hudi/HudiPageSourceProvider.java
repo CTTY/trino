@@ -39,7 +39,6 @@ import io.trino.plugin.hudi.file.HudiBaseFile;
 import io.trino.plugin.hudi.reader.HudiTrinoReaderContext;
 import io.trino.plugin.hudi.storage.HudiTrinoStorage;
 import io.trino.plugin.hudi.storage.TrinoStorageConfiguration;
-import io.trino.spi.Page;
 import io.trino.spi.TrinoException;
 import io.trino.spi.block.Block;
 import io.trino.spi.connector.ColumnHandle;
@@ -54,17 +53,21 @@ import io.trino.spi.connector.EmptyPageSource;
 import io.trino.spi.predicate.TupleDomain;
 import io.trino.spi.type.Decimals;
 import io.trino.spi.type.TypeSignature;
+
 import org.apache.avro.Schema;
 import org.apache.avro.generic.IndexedRecord;
+
 import org.apache.hudi.common.model.HoodieFileFormat;
 import org.apache.hudi.common.table.HoodieTableMetaClient;
 import org.apache.hudi.common.table.TableSchemaResolver;
 import org.apache.hudi.common.table.read.HoodieFileGroupReader;
 import org.apache.hudi.common.util.Option;
 import org.apache.hudi.storage.StoragePath;
+
 import org.apache.parquet.column.ColumnDescriptor;
 import org.apache.parquet.io.MessageColumnIO;
 import org.apache.parquet.schema.MessageType;
+
 import org.joda.time.DateTimeZone;
 
 import java.io.IOException;
@@ -210,8 +213,7 @@ public class HudiPageSourceProvider
                     hiveColumns.stream()
                             .filter(columnHandle -> !columnHandle.isHidden())
                             .collect(Collectors.toList()),
-                    prependHudiMetaColumns(regularColumns)
-            );
+                    prependHudiMetaColumns(regularColumns));
 
             HoodieFileGroupReader<IndexedRecord> fileGroupReader =
                     new HoodieFileGroupReader<>(
@@ -227,8 +229,7 @@ public class HudiPageSourceProvider
                             metaClient.getTableConfig().getProps(),
                             start,
                             length,
-                            false
-                            );
+                            false);
 
             return new HudiPageSource(
                     dataPageSource,

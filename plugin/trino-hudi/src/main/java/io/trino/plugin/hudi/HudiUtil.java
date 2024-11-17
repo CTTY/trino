@@ -182,16 +182,19 @@ public final class HudiUtil
 
     public static List<HiveColumnHandle> prependHudiMetaColumns(List<HiveColumnHandle> dataColumns) {
         List<HiveColumnHandle> columns = new ArrayList<>();
-        columns.addAll(IntStream.range(0, HOODIE_META_COLUMNS.size())
-                .boxed()
-                .map(i -> new HiveColumnHandle(
-                        HOODIE_META_COLUMNS.get(i),
-                        i,
-                        HiveType.HIVE_STRING,
-                        VarcharType.VARCHAR,
-                        Optional.empty(),
-                        HiveColumnHandle.ColumnType.REGULAR, Optional.empty()))
-                .toList());
+        if (dataColumns.stream().noneMatch(handle -> HOODIE_META_COLUMNS.contains(handle.getName()))) {
+            columns.addAll(IntStream.range(0, HOODIE_META_COLUMNS.size())
+                    .boxed()
+                    .map(i -> new HiveColumnHandle(
+                            HOODIE_META_COLUMNS.get(i),
+                            i,
+                            HiveType.HIVE_STRING,
+                            VarcharType.VARCHAR,
+                            Optional.empty(),
+                            HiveColumnHandle.ColumnType.REGULAR, Optional.empty()))
+                    .toList());
+        }
+
         columns.addAll(dataColumns);
         return columns;
     }

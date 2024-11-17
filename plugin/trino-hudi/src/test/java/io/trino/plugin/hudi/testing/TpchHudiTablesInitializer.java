@@ -217,7 +217,7 @@ public class TpchHudiTablesInitializer
         Configuration conf = hdfsEnvironment.getConfiguration(CONTEXT, tablePath);
 
         try {
-            HoodieTableMetaClient.withPropertyBuilder()
+            HoodieTableMetaClient.newTableBuilder()
                     .setTableType(COPY_ON_WRITE)
                     .setTableName(table.getTableName())
                     .setBootstrapIndexClass(NoOpBootstrapIndex.class.getName())

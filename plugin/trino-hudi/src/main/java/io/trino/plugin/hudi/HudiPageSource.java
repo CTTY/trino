@@ -14,7 +14,6 @@
 package io.trino.plugin.hudi;
 
 import static com.google.common.base.Preconditions.checkState;
-import static org.apache.hudi.common.model.HoodieRecord.HOODIE_META_COLUMNS;
 
 import io.trino.plugin.hive.HiveColumnHandle;
 import io.trino.plugin.hive.HivePartitionKey;
@@ -23,8 +22,9 @@ import io.trino.plugin.hudi.util.HudiAvroSerializer;
 import io.trino.spi.Page;
 import io.trino.spi.PageBuilder;
 import io.trino.spi.connector.ConnectorPageSource;
-import io.trino.spi.connector.ConnectorSession;
 import io.trino.spi.metrics.Metrics;
+
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -38,6 +38,7 @@ import java.util.concurrent.CompletableFuture;
 public class HudiPageSource implements ConnectorPageSource {
 
     HoodieFileGroupReader<IndexedRecord> fileGroupReader;
+    // TODO: Remove pageSource here, Hudi doesn't use this page source to read
     ConnectorPageSource pageSource;
     HudiTrinoReaderContext readerContext;
     PageBuilder pageBuilder;
@@ -51,16 +52,19 @@ public class HudiPageSource implements ConnectorPageSource {
             HudiTrinoReaderContext readerContext,
             List<HiveColumnHandle> dataHandles,
             List<HiveColumnHandle> columnHandles) {
+        this.pageSource = pageSource;
         this.fileGroupReader = fileGroupReader;
+        this.initFileGroupReader();
         this.readerContext = readerContext;
         this.pageBuilder = new PageBuilder(dataHandles.stream().map(HiveColumnHandle::getType).toList());
         this.avroSerializer = new HudiAvroSerializer(columnHandles);
         Map<String, String> nameToPartitionValueMap = partitionKeyList.stream().collect(
                 Collectors.toMap(HivePartitionKey::name, HivePartitionKey::value));
+        this.partitionValueMap = new HashMap<>();
         for (int i = 0; i < dataHandles.size(); i++) {
             HiveColumnHandle handle = dataHandles.get(i);
             if (handle.isPartitionKey()) {
-                partitionValueMap.put(i + HOODIE_META_COLUMNS.size(), nameToPartitionValueMap.get(handle.getName()));
+                partitionValueMap.put(i, nameToPartitionValueMap.get(handle.getName()));
             }
         }
     }
@@ -83,7 +87,7 @@ public class HudiPageSource implements ConnectorPageSource {
     @Override
     public boolean isFinished() {
         try {
-            return pageSource.isFinished() && !fileGroupReader.hasNext();
+            return !fileGroupReader.hasNext();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -91,16 +95,10 @@ public class HudiPageSource implements ConnectorPageSource {
 
     @Override
     public Page getNextPage() {
-        // 1. init file group reader, and within file group reader:
-        //      - scan log files to get avro records
-        //      - use trino parquet reader to get the next page
-        //      - convert parquet page to avro records with HudiAvroSerializer
-        //      - merge records (HudiTrinoRecordMerger...)
-        //      - build a page with HudiAvroSerializer and return
         checkState(pageBuilder.isEmpty(), "PageBuilder is not empty at the beginning of a new page");
         try {
             while(fileGroupReader.hasNext()) {
-                avroSerializer.buildRecordInPage(pageBuilder, fileGroupReader.next(), partitionValueMap, true);
+                avroSerializer.buildRecordInPage(pageBuilder, fileGroupReader.next(), partitionValueMap, false);
             }
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -130,5 +128,13 @@ public class HudiPageSource implements ConnectorPageSource {
     @Override
     public Metrics getMetrics() {
         return pageSource.getMetrics();
+    }
+
+    protected void initFileGroupReader() {
+        try {
+            this.fileGroupReader.initRecordIterators();
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to initialize file group reader!", e);
+        }
     }
 }
