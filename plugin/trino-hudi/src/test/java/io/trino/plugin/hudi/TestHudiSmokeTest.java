@@ -60,6 +60,7 @@ public class TestHudiSmokeTest
         //        System.out.println(getQueryRunner().execute(getSession(), "EXPLAIN ANALYZE SELECT * FROM " + HUDI_STOCK_TICKS_COW).toString());
 
         System.out.println("test start");
+//        getQueryRunner().execute(getSession(), "SET SESSION hudi.metadata-enabled = true");
         String res = getQueryRunner().execute(getSession(), "SELECT * FROM " + HUDI_STOCK_TICKS_COW).toString();
         System.out.println(res);
 //        assertQuery("SELECT dt, count(1) FROM " + STOCK_TICKS_MOR + " GROUP BY dt",

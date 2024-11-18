@@ -156,10 +156,15 @@ public class HudiTrinoStorage extends HoodieStorage
 
     @Override
     public List<StoragePathInfo> listDirectEntries(StoragePath path) throws IOException {
-        FileIterator fileIterator = fileSystem.listFiles(convertToLocation(path));
+        // TrinoFileSystem#listFiles lists recursively, we need to limit the result to only the direct children
+        Location location = convertToLocation(path);
+        FileIterator fileIterator = fileSystem.listFiles(location);
         List<StoragePathInfo> fileList = new ArrayList<>();
         while (fileIterator.hasNext()) {
-            fileList.add(convertToPathInfo(fileIterator.next()));
+            FileEntry entry = fileIterator.next();
+            if (entry.location().parentDirectory().path().equals(location.path())) {
+                fileList.add(convertToPathInfo(entry));
+            }
         }
         return fileList;
     }
@@ -176,11 +181,14 @@ public class HudiTrinoStorage extends HoodieStorage
 
     @Override
     public List<StoragePathInfo> listDirectEntries(StoragePath path, StoragePathFilter filter) throws IOException {
-        FileIterator fileIterator = fileSystem.listFiles(convertToLocation(path));
+        // TrinoFileSystem#listFiles lists recursively, we need to limit the result to only the direct children
+        Location location = convertToLocation(path);
+        FileIterator fileIterator = fileSystem.listFiles(location);
         List<StoragePathInfo> fileList = new ArrayList<>();
         while (fileIterator.hasNext()) {
             FileEntry entry = fileIterator.next();
-            if (filter.accept(new StoragePath(entry.location().toString()))) {
+            if (filter.accept(new StoragePath(entry.location().toString()))
+                    && entry.location().parentDirectory().path().equals(location.path())) {
                 fileList.add(convertToPathInfo(entry));
             }
         }
