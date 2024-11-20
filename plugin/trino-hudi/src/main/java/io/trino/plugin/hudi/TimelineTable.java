@@ -83,7 +83,7 @@ public class TimelineTable
     private List<Object> getRecord(HoodieInstant hudiInstant)
     {
         List<Object> columns = new ArrayList<>();
-        columns.add(hudiInstant.getTimestamp());
+        columns.add(hudiInstant.requestedTime());
         columns.add(hudiInstant.getAction());
         columns.add(hudiInstant.getState().toString());
         checkArgument(columns.size() == types.size(), "Expected %s types in row, but got %s values", types.size(), columns.size());

@@ -79,7 +79,7 @@ public class HudiSplitSource
                 .getCommitsTimeline()
                 .filterCompletedInstants()
                 .lastInstant()
-                .map(HoodieInstant::getTimestamp)
+                .map(HoodieInstant::requestedTime)
                 .orElseThrow(() -> new TrinoException(HudiErrorCode.HUDI_NO_VALID_COMMIT, "Table has no valid commits"));
         List<HiveColumnHandle> partitionColumnHandles = table.getPartitionColumns().stream()
                 .map(column -> partitionColumnHandleMap.get(column.getName())).collect(toList());
