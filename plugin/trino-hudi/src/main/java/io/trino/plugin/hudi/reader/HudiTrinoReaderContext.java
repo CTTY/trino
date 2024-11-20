@@ -24,6 +24,7 @@ import io.trino.spi.connector.ConnectorPageSource;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.function.UnaryOperator;
@@ -51,6 +52,18 @@ public class HudiTrinoReaderContext extends HoodieReaderContext<IndexedRecord> {
     Map<Integer, String> partitionValueMap;
     Map<String, Integer> colToPosMap;
     List<HiveColumnHandle> columnHandles;
+
+    public static final ClosableIterator<IndexedRecord> emptyIterator = ClosableIterator.wrap(new Iterator<>() {
+        @Override
+        public boolean hasNext() {
+            return false;
+        }
+
+        @Override
+        public IndexedRecord next() {
+            return null;
+        }
+    });
 
     public HudiTrinoReaderContext(
             ConnectorPageSource pageSource,
@@ -86,7 +99,11 @@ public class HudiTrinoReaderContext extends HoodieReaderContext<IndexedRecord> {
             Schema dataSchema,
             Schema requiredSchema,
             HoodieStorage storage) {
-        Page baseFilePage = pageSource.getNextPage();
+        Page baseFilePage;
+        if (pageSource.isFinished() || (baseFilePage = pageSource.getNextPage()) == null) {
+            return emptyIterator;
+        }
+
         return new ClosableIterator<>() {
             int pos = 0;
 
