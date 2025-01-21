@@ -48,9 +48,10 @@ public class HudiTrinoReaderContext extends HoodieReaderContext<IndexedRecord> {
 
     ConnectorPageSource pageSource;
     private HudiAvroSerializer avroSerializer;
-    private PageBuilder pageBuilder;
-    Map<Integer, String> partitionValueMap;
+    //    private PageBuilder pageBuilder;
+    //    Map<Integer, String> partitionValueMap;
     Map<String, Integer> colToPosMap;
+    List<HiveColumnHandle> dataHandles;
     List<HiveColumnHandle> columnHandles;
 
     public static final ClosableIterator<IndexedRecord> emptyIterator = ClosableIterator.wrap(new Iterator<>() {
@@ -72,17 +73,18 @@ public class HudiTrinoReaderContext extends HoodieReaderContext<IndexedRecord> {
             List<HiveColumnHandle> columnHandles) {
         this.pageSource = pageSource;
         this.avroSerializer = new HudiAvroSerializer(columnHandles);
-        this.pageBuilder = new PageBuilder(dataHandles.stream().map(HiveColumnHandle::getType).toList());
-        Map<String, String> nameToPartitionValueMap = partitionKeyList.stream().collect(
-                Collectors.toMap(e -> e.name(), e -> e.value()));
-        this.partitionValueMap = new HashMap<>();
-        for (int i = 0; i < dataHandles.size(); i++) {
-            HiveColumnHandle handle = dataHandles.get(i);
-            if (handle.isPartitionKey()) {
-                partitionValueMap.put(i + HOODIE_META_COLUMNS.size(), nameToPartitionValueMap.get(handle.getName()));
-            }
-        }
+        //        this.pageBuilder = new PageBuilder(dataHandles.stream().map(HiveColumnHandle::getType).toList());
+        //        Map<String, String> nameToPartitionValueMap = partitionKeyList.stream().collect(
+        //                Collectors.toMap(e -> e.name(), e -> e.value()));
+        //        this.partitionValueMap = new HashMap<>();
+        //        for (int i = 0; i < dataHandles.size(); i++) {
+        //            HiveColumnHandle handle = dataHandles.get(i);
+        //            if (handle.isPartitionKey()) {
+        //                partitionValueMap.put(i + HOODIE_META_COLUMNS.size(), nameToPartitionValueMap.get(handle.getName()));
+        //            }
+        //        }
 
+        this.dataHandles = dataHandles;
         this.columnHandles = columnHandles;
         this.colToPosMap = new HashMap<>();
         for (int i = 0; i < columnHandles.size(); i++) {
@@ -151,7 +153,13 @@ public class HudiTrinoReaderContext extends HoodieReaderContext<IndexedRecord> {
 
     @Override
     public Object getValue(IndexedRecord record, Schema schema, String fieldName) {
-        return record.get(colToPosMap.get(fieldName));
+        if (colToPosMap.containsKey(fieldName)) {
+            return record.get(colToPosMap.get(fieldName));
+        } else {
+            // record doesn't have the queried field, return null
+            return null;
+        }
+
     }
 
     @Override

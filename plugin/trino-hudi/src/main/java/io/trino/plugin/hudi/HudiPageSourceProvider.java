@@ -154,7 +154,7 @@ public class HudiPageSourceProvider
         this.dataSourceStats = requireNonNull(dataSourceStats, "dataSourceStats is null");
         this.options = requireNonNull(parquetReaderConfig, "parquetReaderConfig is null").toParquetReaderOptions();
         this.timeZone = DateTimeZone.forID(TimeZone.getDefault().getID());
-        this.useUniPageSource = true;
+        this.useUniPageSource = false;
     }
 
     @Override
@@ -170,6 +170,16 @@ public class HudiPageSourceProvider
             HudiTableHandle hudiTableHandle = (HudiTableHandle) connectorTable;
             HudiSplit hudiSplit = (HudiSplit) connectorSplit;
             Optional<HudiBaseFile> hudiBaseFileOpt = hudiSplit.getBaseFile();
+
+            String dataFilePath = hudiBaseFileOpt.isPresent()
+                    ? hudiBaseFileOpt.get().getPath()
+                    : hudiSplit.getLogFiles().get(0);
+            // Filter out metadata table splits
+            if (dataFilePath.contains(new StoragePath(
+                    ((HudiTableHandle) connectorTable).getBasePath()).toUri().getPath() + "/.hoodie/metadata")) {
+                return new EmptyPageSource();
+            }
+
             long start = 0;
             long length = 10;
             if (hudiBaseFileOpt.isPresent()) {
@@ -199,7 +209,7 @@ public class HudiPageSourceProvider
             TrinoFileSystem fileSystem = fileSystemFactory.create(session);
             ConnectorPageSource dataPageSource = createPageSource(
                     session,
-                    regularColumns,
+                    prependHudiMetaColumns(regularColumns),
                     hudiSplit,
                     fileSystem.newInputFile(Location.of(hudiBaseFileOpt.get().getPath()), hudiBaseFileOpt.get().getFileSize()),
                     dataSourceStats,
@@ -252,7 +262,7 @@ public class HudiPageSourceProvider
                 ((HudiTableHandle) connectorTable).getBasePath()).toUri().getPath() + "/.hoodie/metadata")) {
             return new EmptyPageSource();
         }
-        if (split.getLogFiles().isEmpty()) {
+        if (useUniPageSource && split.getLogFiles().isEmpty()) {
             HudiBaseFile baseFile = split.getBaseFile().get();
             String path = baseFile.getPath();
             HoodieFileFormat hudiFileFormat = getHudiFileFormat(path);

@@ -44,6 +44,8 @@ public class HudiPageSource implements ConnectorPageSource {
     PageBuilder pageBuilder;
     HudiAvroSerializer avroSerializer;
     Map<Integer, String> partitionValueMap;
+    List<HiveColumnHandle> dataHandles;
+    List<HiveColumnHandle> columnHandles;
 
     public HudiPageSource(
             ConnectorPageSource pageSource,
@@ -56,6 +58,8 @@ public class HudiPageSource implements ConnectorPageSource {
         this.fileGroupReader = fileGroupReader;
         this.initFileGroupReader();
         this.readerContext = readerContext;
+        this.dataHandles = dataHandles;
+        this.columnHandles = columnHandles;
         this.pageBuilder = new PageBuilder(dataHandles.stream().map(HiveColumnHandle::getType).toList());
         this.avroSerializer = new HudiAvroSerializer(columnHandles);
         Map<String, String> nameToPartitionValueMap = partitionKeyList.stream().collect(

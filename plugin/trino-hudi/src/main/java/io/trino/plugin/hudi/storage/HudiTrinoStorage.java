@@ -19,7 +19,6 @@ import io.trino.filesystem.FileIterator;
 import io.trino.filesystem.Location;
 import io.trino.filesystem.TrinoFileSystem;
 import io.trino.filesystem.TrinoInputFile;
-import io.trino.plugin.hive.metastore.Storage;
 import io.trino.plugin.hudi.io.TrinoSeekableDataInputStream;
 import org.apache.hudi.io.SeekableDataInputStream;
 import org.apache.hudi.storage.HoodieStorage;
@@ -216,6 +215,12 @@ public class HudiTrinoStorage extends HoodieStorage
     public boolean deleteFile(StoragePath path) throws IOException {
         fileSystem.deleteFile(convertToLocation(path));
         return true;
+    }
+
+    @Override
+    public void setModificationTime(StoragePath path, long modificationTime) throws IOException {
+        Location sameLocation = convertToLocation(path);
+        fileSystem.renameFile(sameLocation, sameLocation);
     }
 
     @Override

@@ -68,6 +68,28 @@ public class TestHudiSmokeTest
     }
 
     @Test
+    public void testReadPartitionedCOWTableVer8()
+    {
+//        String res = getQueryRunner().execute(getSession(), "SELECT * FROM " + HUDI_STOCK_TICKS_COW).toString();
+//        System.out.println(res);
+        assertQuery("SELECT date FROM " + HUDI_STOCK_TICKS_COW + " GROUP BY date",
+                "SELECT * FROM VALUES ('2018-08-31')");
+//        assertQuery("SELECT date, count(1) FROM " + HUDI_STOCK_TICKS_COW + " GROUP BY date",
+//                "SELECT * FROM VALUES ('2018-08-31', '99')");
+    }
+
+    @Test
+    public void testReadPartitionedMORTableVer8()
+    {
+//        String res = getQueryRunner().execute(getSession(), "SELECT * FROM " + HUDI_STOCK_TICKS_COW).toString();
+//        System.out.println(res);
+        assertQuery("SELECT date FROM " + HUDI_STOCK_TICKS_MOR + " GROUP BY date",
+                "SELECT * FROM VALUES ('2018-08-31')");
+//        assertQuery("SELECT date, count(1) FROM " + HUDI_STOCK_TICKS_COW + " GROUP BY date",
+//                "SELECT * FROM VALUES ('2018-08-31', '99')");
+    }
+
+    @Test
     public void testReadPartitionedMORTables()
     {
         System.out.println("test start");
